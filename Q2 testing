@@ -1,0 +1,69 @@
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Constants
+R = 10  # ohms
+L = 20  # henries
+C = 0.05  # farads
+omega = 20  # angular frequency
+
+# Voltage function
+def v(t):
+    return 20 * np.sin(omega * t)
+def dv(t):
+    return 400 * np.cos(omega * t)
+
+# System of differential equations
+def rlc_system(t, y):
+    # Unpack state variables
+    i1, i2, vc = y
+
+    # Define differential equations
+    di1_dt = (1 / L) * (v(t) - R * i1)  # Equation for i1
+    di2_dt = (1 / L) * (v(t) - (i2 / C))  # Equation for i2
+    dvc_dt = i2 / C  # Equation for vc
+
+    return np.array([di1_dt, di2_dt, dvc_dt])
+
+
+# Initial conditions
+i1_0 = 0  # initial current through the inductor
+i2_0 = 0  # initial current through the resistor (or capacitor)
+vc_0 = 0  # initial voltage across the capacitor
+y0 = [i1_0, i2_0, vc_0]
+
+# Time span
+t_span = (0, 10)
+
+# Solve the system of differential equations
+sol = solve_ivp(rlc_system, t_span, y0, t_eval=np.linspace(0, 10, 10000))
+
+# Extract results
+t = sol.t
+i1 = sol.y[0]  # Current through the inductor
+i2 = sol.y[1]  # Current through the resistor (or capacitor)
+vc = sol.y[2]  # Voltage across the capacitor
+
+# Plotting
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+color1 = 'tab:red'
+color2 = 'tab:blue'
+color3 = 'tab:black'
+ax1.set_xlabel('Time (s)')
+ax1.set_ylabel('Current (A)', color=color1)
+ax1.plot(t, i1, label='$i_1$ (Inductor Current)', color=color1)
+ax1.plot(t, i2, label='$i_2$ (Resistor/Capacitor Current)', linestyle='--', color=color2)
+ax1.tick_params(axis='y', labelcolor=color1)
+
+ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+color4 = 'tab:green'
+ax2.set_ylabel('Voltage (V)', color=color4)
+ax2.plot(t, vc, label='$V_c$ (Voltage Across Capacitor)', color=color4)
+ax2.tick_params(axis='y', labelcolor=color4)
+
+fig.tight_layout()
+plt.title('RLC Circuit Response')
+plt.grid(True)
+plt.show()
