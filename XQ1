@@ -1,0 +1,52 @@
+# region imports
+import numpy as np
+from scipy.integrate import solve_ivp, quad
+import matplotlib.pyplot as plt
+# endregion
+
+# region function definitions
+#hey its S(x) which we need to inergrate
+def S(x):
+    s, _ = quad(lambda t: np.sin(t**2), 0, x)
+    return s
+#the exact solution you gave us
+def Exact(x):
+    return 1/(2.5 - S(x)) + 0.01 * x**2
+#this gets everything ready to integrate
+def ODE_System(x, y):
+    Y = y[0]
+    Ydot = (Y - 0.01*x**2)**2 * np.sin(x**2) + 0.02*x
+    return [Ydot]
+#just sets everything ready to plot
+def Plot_Result(xRange_Num, y_Num, xRange_Xct, y_Xct):
+    plt.plot(xRange_Num, y_Num, marker='^', linestyle='', label='Numerical')
+    plt.plot(xRange_Xct, y_Xct, label='Exact')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title("IVP: y'=(y-0.01x^2 )^2 sin(x^2 )+0.02x, y(0)=0.4")
+    plt.xticks(np.arange(0, 6.1, 0.6))
+    plt.yticks(np.arange(0, 1.1, 0.1))
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def main():
+    """
+    This function solves the initial value problem of problem 1 of exam 2, Spring 2023.
+    y'=(y-0.01x**2)**2*sin(x**2)+0.02x
+    y(0)=0.4
+    It then plots the numerical solution and the exact solution according to the formatting criteria
+    """
+    xRange = np.arange(0, 5.2, 0.2)  # create a numpy array for the x range to evaluate numerical solution (h=0.2)
+    xRange_xct = np.linspace(0, 5, 500)  # create a numpy array for the x range for the exact solution
+    Y0 = [0.4]  # create initial conditions
+    sln = solve_ivp(ODE_System, [0, 5], Y0, t_eval=xRange)  # numerically solve i.v.p. with default RK45 method
+    xctSln = np.array([Exact(x) for x in xRange_xct])  # produce array of y values for exact solution
+    Plot_Result(xRange, sln.y[0], xRange_xct, xctSln)  # call the plotting function to produce the required plot
+
+# endregion
+
+# region function calls
+if __name__ == "__main__":
+    main()
+# end region
