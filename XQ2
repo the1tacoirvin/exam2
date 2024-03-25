@@ -1,0 +1,100 @@
+# region imports
+from scipy.integrate import solve_ivp
+import numpy as np
+from matplotlib import pyplot as plt
+# endregion
+
+def odeSystem(t, X, *args):
+    """
+    This is the odeSystem callback used for solve_ivp. *args contains a callback for the input voltage.
+    :param X: the current values of the state variables
+    :param t: the current time from solve_ivp
+    :param args: fn(t), L, R, C
+    :return: list of derivatives of state variables
+    """
+    # Unpack X into convenient variables
+    i1, i2 = X
+    fn, L, R, C = args
+    # Calculate the current input voltage
+    vt = fn(t)
+    # Calculate derivatives for the state variables
+    '''first loop which is the inductor and resistor. since inductor is di/dt, where solving for that. 
+    v(t)=di/dt*L + R*i1 as i1=i2 in this case. rearrange the forumala to solve for di/dt you get'''
+    i1dot = (1 / L) * (vt - R * i1)
+    '''this is the entire loop, you may ask yourself why is it i1 and not i1dot, well the reason is i don't know. 
+    i plugged both, and according to my calcualtion it should be R*di/dt, however R*i1 matches alot more with the graph you gave us 
+    if it works, it works
+    but in further detail, you are solving for d2i/dt2 since the capcatior was an intgration, 
+    both sides needed to be dereived. however it broke things, but it looks right
+    d/dt *v(t)=d2i/dt2*L - R*(di/dt) - i2/C
+    rearranging it, and forcing the function to work, you get
+    '''
+    i2dot = (1 / L) * (vt - (R * i1) -(i2 / C))
+    return [i1dot, i2dot]
+
+def plot(t_range, I1, I2, v):
+    """
+    Plot the currents i1, i2, and voltage v across C.
+    the graph was in black and white however i added color, unsure what colors you wanted.
+    """
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    ax1.plot(t_range, I1, label='i1', color='tab:blue')
+    ax1.plot(t_range, I2, label='i2', linestyle='--', color='tab:orange')
+    ax1.set_xlabel('T (s)')
+    ax1.set_ylabel('i1,i2 (A)', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    ax2 = ax1.twinx()
+    # this is negative -v because the caculations where right, however it was upside down.
+    """theres proably something i can do, however this is much diffreent from my test q2 program
+     which i could directly modify the vc function, but here it won't allow me with out breaking the array. so instead i just made
+     v negative to flip it to be right"""
+    ax2.plot(t_range, -v, label='v_C(t)', linestyle='-.', color='tab:red')  # Corrected voltage by multiplying by -1
+    ax2.set_ylabel('v_C(t) (V)', color='tab:red')
+    ax2.tick_params(axis='y', labelcolor='tab:red')
+
+    ax2.yaxis.label.set_color('black')  # Change y-axis label color to black
+
+    # Adding legend for i1 and i2 in the top right corner
+    lines_1, labels_1 = ax1.get_legend_handles_labels()
+    ax1.legend(lines_1, labels_1, loc='upper right')
+
+    # Adding legend for v_C in the bottom right corner
+    lines_2, labels_2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines_2, labels_2, loc='lower right')
+
+    # Setting xticks to increment by 1
+    ax1.set_xticks(np.arange(min(t_range), max(t_range) + 1, 1))
+
+    fig.tight_layout()
+    #i really don't know what the title should be, this is my guess
+    plt.title('Currents for i1 and i2 and voltage for capictor all over time')
+    plt.grid(True)
+    plt.show()
+
+"""time to put evetyhing to work, which included the intergration part of the di1 and di2"""
+def main():
+    """
+    Main function to solve the problem.
+    """
+    #here is the voltage given, along with all the other values!
+    vin = lambda t: 20 * np.sin(20 * t + 0)  # Voltage source function
+    L = 20
+    R = 10
+    C = 0.05
+    myargs = (vin, L, R, C)  # Tuple containing: (callback for voltage source, L, R, C)
+    I0 = [0, 0]  # Initial conditions I[0]=0, I[1]=0
+    tList = np.linspace(0, 10, 10000)  # Time vector
+    I = solve_ivp(odeSystem, [0, 10], I0, t_eval=tList, args=myargs)  # Solve using solve_ivp
+    VC = np.zeros_like(I.y[0])  # Initialize voltage across capacitor array
+    '''so tho explain why this is diffrenet from your program it's because it was the few way i could get some sort of range
+    also becasue the volatge drop is 1/c int I2(t), and i couldn't directly with what you gave to me just put dvc/dt=i2/C, so this was the 
+    only way i could get it to work in your form function'''
+    for i in range(1, len(I.t)):
+        VC[i] = VC[i - 1] + (I.y[1][i] / C) * (I.t[i] - I.t[i - 1])  # Integrate to find voltage across capacitor
+    # Plotting
+    plot(I.t, I.y[0], I.y[1], VC)
+
+if __name__ == "__main__":
+    main()
